@@ -1,0 +1,39 @@
+{
+  "name": "medium-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend foundation for a Medium-like publishing platform",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "format": "prettier --write .",
+    "lint": "tsc --noEmit",
+    "start": "node dist/server.js",
+    "test": "node --test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "6.16.2",
+    "cors": "2.8.5",
+    "dotenv": "17.2.2",
+    "express": "5.1.0",
+    "express-rate-limit": "8.7.0",
+    "helmet": "8.1.0",
+    "ioredis": "5.7.0"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.3",
+    "@types/node": "22.15.30",
+    "prettier": "3.6.2",
+    "prisma": "6.16.2",
+    "tsx": "4.20.5",
+    "typescript": "5.9.2"
+  }
+}
