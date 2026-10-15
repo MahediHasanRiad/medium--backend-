@@ -76,6 +76,59 @@ Expected domains may include:
 - media
 - notifications
 
+## Backend Project
+
+Use this structure for the backend. Since this repository uses TypeScript, use `.ts` extensions for implementation files.
+
+```text
+src/
+├── app.ts
+├── server.ts
+│
+├── config/
+│   ├── db.ts
+│   └── env.ts
+│
+├── api/
+│   └── v1/
+│       ├── user/
+│       │   ├── user.controller.ts # business logic
+│       │   ├── user.repository.ts   # database access
+│       │   ├── user.routes.ts
+│       │   ├── user.validation.ts
+│       │   └── user.model.ts
+│       │
+│       ├── article/
+│       │   ├── article.controller.ts
+│       │   ├── article.service.ts
+│       │   ├── article.repository.ts
+│       │   ├── article.routes.ts
+│       │   ├── article.validation.ts
+│       │   └── article.model.ts
+│       │
+│       └── comment/
+│           ├── comment.controller.ts
+│           ├── comment.service.ts
+│           ├── comment.repository.ts
+│           ├── comment.routes.ts
+│           ├── comment.validation.ts
+│           └── comment.model.ts
+│
+├── middleware/
+│   ├── auth.middleware.ts
+│   ├── error.middleware.ts
+│   └── validate.middleware.ts
+│
+├── shared/
+│   ├── utils/
+│   ├── constants/
+│   └── helpers/
+│
+└── tests/
+```
+
+Keep controllers responsible for auth request flows and business logic in this MVP. Keep Prisma/database access inside repositories or the owning domain module. Add a domain folder only when that domain is implemented.
+
 Not every domain needs to exist immediately.
 
 Create modules when the product actually requires them.
@@ -83,7 +136,7 @@ Create modules when the product actually requires them.
 A module should generally own its:
 
 - routes/controllers
-- service/business logic
+- controller/business logic
 - validation
 - data access
 - domain-specific types
@@ -267,7 +320,7 @@ Reject unexpected or malformed input early.
 
 Validation belongs at the API boundary.
 
-Business rules belong in the service/domain layer.
+For the auth module, business rules belong in controllers for this MVP. Other modules may use a service/domain layer when their complexity justifies it.
 
 Do not rely on TypeScript types as runtime validation.
 
@@ -741,7 +794,7 @@ Security is not optional because this is an MVP.
 
 At minimum consider:
 
-- secure password hashing
+- secure password hashing with the `bcrypt` npm package
 - authentication validation
 - authorization
 - input validation

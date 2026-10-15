@@ -1,9 +1,10 @@
-import Redis from 'ioredis';
 import { buildApp } from './app';
 import { config } from './config';
+import { redis } from './config/redis';
 import { prisma } from './lib/prisma';
 
-const redis = new Redis(config.redisUrl);
+
+
 const app = buildApp(prisma, redis);
 let server: ReturnType<typeof app.listen>;
 

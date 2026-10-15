@@ -16,4 +16,6 @@ docker compose exec api npm run db:studio
 
 Use `npm run db:migrate` to create a new development migration after changing `prisma/schema.prisma`, and `npm run db:migrate:deploy` to apply committed migrations in deployment. Useful local commands are `npm run build`, `npm run lint`, and `npm run test`. Add domain modules under `src/` as the product grows.
 
+Prisma uses `DATABASE_URL` from the environment and generates the standard client into `node_modules/@prisma/client`. Run `npm run db:generate` after changing the schema. Do not edit the database manually; commit the generated migration directory with schema changes.
+
 API routes under `/api` are limited to 100 requests per 15 minutes by default. Configure `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` in `.env` as needed. Keep stricter, route-specific limiters for authentication, publishing, comments, and uploads when those modules are added.

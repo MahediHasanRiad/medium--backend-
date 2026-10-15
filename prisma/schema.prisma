@@ -1,15 +1,365 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PublicationRole {
+  OWNER
+  EDITOR
+  WRITER
+}
+
+enum NotificationType {
+  FOLLOW
+  CLAP
+  COMMENT
+  REPLY
+  ARTICLE_PUBLISHED
+}
+
+enum SubscriptionPlan {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+  PAST_DUE
+}
+
+enum PlanType {
+  FREE
+  PREMIUM
+  ENTERPRISE
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id         String   @id @default(cuid())
+  email      String   @unique
+  username   String?  @unique
+  password   String
+  role       UserRole @default(USER)
+  isVerified Boolean  @default(false)
+
+  displayName String?
+  bio         String?
+  avatarUrl   String?
+  websiteUrl  String?
+  address     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  sessions Session[]
+
+  articles  Article[]
+  comments  Comment[]
+  likes     Like[]
+  bookmarks Bookmark[]
+
+  followers Follow[] @relation("UserFollowers")
+  following Follow[] @relation("UserFollowing")
+
+  publicationMemberships PublicationMember[]
+
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsSent     Notification[] @relation("NotificationActor")
+
+  articleViews ArticleView[]
+  subscription Subscription?
+
+  @@index([createdAt, email, id, username])
+}
+
+model Session {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Article {
+  id String @id @default(cuid())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  publicationId String?
+  publication   Publication? @relation(fields: [publicationId], references: [id], onDelete: SetNull)
+
+  title      String
+  slug       String  @unique
+  subtitle   String?
+  content    String  @db.Text
+  excerpt    String? @db.Text
+  coverImage String?
+
+  status ArticleStatus @default(DRAFT)
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tags      ArticleTag[]
+  comments  Comment[]
+  likes     Like[]
+  bookmarks Bookmark[]
+  views     ArticleView[]
+
+  @@index([authorId])
+  @@index([publicationId])
+  @@index([status, publishedAt])
+  @@index([createdAt])
+}
+
+model Tag {
+  id String @id @default(cuid())
+
+  name String @unique
+  slug String @unique
+
+  createdAt DateTime @default(now())
+
+  articles ArticleTag[]
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([articleId, tagId])
+  @@index([tagId])
+}
+
+model Comment {
+  id String @id @default(cuid())
+
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  content String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([articleId, createdAt])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model Like {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  count Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, articleId])
+  @@index([articleId])
+}
+
+model Bookmark {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, articleId])
+  @@index([articleId])
+}
+
+model Follow {
+  id String @id @default(cuid())
+
+  followerId String
+  follower   User   @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+
+  followingId String
+  following   User   @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}
+
+model Publication {
+  id String @id @default(cuid())
+
+  name        String
+  slug        String? @unique
+  description String? @db.Text
+  logoUrl     String?
+  coverUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  PublicationMember[]
+  articles Article[]
+}
+
+model PublicationMember {
+  id String @id @default(cuid())
+
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role PublicationRole @default(WRITER)
+
+  createdAt DateTime @default(now())
+
+  @@unique([publicationId, userId])
+  @@index([userId])
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  recipientId String
+  recipient   User   @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  actorId String?
+  actor   User?   @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  type NotificationType
+
+  articleId String?
+  commentId String?
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([recipientId, isRead, createdAt])
+  @@index([actorId])
+}
+
+model ArticleView {
+  id String @id @default(cuid())
+
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  ipHash    String?
+  userAgent String?
+  readTime  Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([articleId, createdAt])
+  @@index([userId])
+}
+
+model Subscription {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId String?
+  plan   Plan?   @relation(fields: [planId], references: [id])
+
+  status SubscriptionStatus @default(ACTIVE)
+
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  autoRenew Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Plan {
+  id          String           @id @default(uuid())
+  name        SubscriptionPlan @unique
+  description String?
+
+  monthlyRegularPrice    Decimal  @default(0) @db.Decimal(10, 2)
+  monthlyDiscountedPrice Decimal? @db.Decimal(10, 2)
+
+  yearlyRegularPrice    Decimal  @default(0) @db.Decimal(10, 2)
+  yearlyDiscountedPrice Decimal? @db.Decimal(10, 2)
+
+  isActive Boolean @default(true)
+
+  features      PlanFeature[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("plans")
+}
+
+model PlanFeature {
+  id String @id @default(uuid())
+
+  planId String
+
+  name        String
+  description String?
+
+  enabled Boolean @default(false)
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId])
+  @@map("plan_features")
 }
